@@ -2,7 +2,7 @@
 
 broccoli plugin that combines lodash.template and broccoli for fun stuff.
 
-example:
+## example:
 
 ```js
 var templatedTree = new Template(untemplatedTree, pathToTemplate,
