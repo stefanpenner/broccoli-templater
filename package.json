@@ -1,6 +1,6 @@
 {
   "name": "broccoli-templater",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "easily use lodash templates to template many files",
   "main": "index.js",
   "scripts": {
