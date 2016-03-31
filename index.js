@@ -6,17 +6,10 @@ var TemplateFile = require('./template-file');
 var p = require('path');
 var fs = require('fs');
 
-function expand(input) {
-  var path = p.dirname(input);
-  var file = p.basename(input);
-
-  return path + '/{' + file + '}';
-}
-
 module.exports = Template;
 
 function Template(inputTree, templatePath, variablesFn, options) {
-  Filter.call(this, stew.find([inputTree, expand(templatePath)]), options);
+  Filter.call(this, inputTree, options);
 
   this.templatePath = templatePath;
   this.variablesFn = variablesFn;
