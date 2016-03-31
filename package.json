@@ -4,7 +4,8 @@
   "description": "easily use lodash templates to template many files",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha tests",
+    "test:debug": "mocha debug tests"
   },
   "repository": {
     "type": "git",
@@ -22,7 +23,14 @@
   "homepage": "https://github.com/stefanpenner/broccoli-templater",
   "dependencies": {
     "broccoli-filter": "^0.1.11",
-    "broccoli-stew": "^0.2.1",
+    "broccoli-stew": "^1.2.0",
     "lodash.template": "^3.3.2"
+  },
+  "devDependencies": {
+    "broccoli": "^0.16.9",
+    "chai": "^3.5.0",
+    "chai-fs": "^0.1.0",
+    "mocha": "^2.4.5",
+    "walk-sync": "^0.2.6"
   }
 }
