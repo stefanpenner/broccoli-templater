@@ -1,15 +1,17 @@
-var chai = require('chai');
-var expect = chai.expect;
-var broccoli = require('broccoli');
-var Template = require('..');
-var walkSync = require('walk-sync');
-var fs = require('fs');
+'use strict';
+
+const chai = require('chai');
+const expect = chai.expect;
+const broccoli = require('broccoli');
+const Template = require('..');
+const walkSync = require('walk-sync');
+const fs = require('fs');
 
 chai.use(require('chai-fs'));
 
 describe('BroccoliTemplater', function() {
   describe('builds', function() {
-    var builder;
+    let builder;
 
     function template(tree, templatePath, callbackForValues) {
       builder = new broccoli.Builder(new Template(tree, templatePath , callbackForValues));
@@ -17,9 +19,9 @@ describe('BroccoliTemplater', function() {
     }
 
     function filesWithin(result) {
-      return walkSync(result.directory).filter(function(file) {
+      return walkSync(result.directory).filter(file => {
         return file.charAt(file.length - 1) !== '/'
-      }).map(function(p) {
+      }).map(p => {
         return p.replace(__dirname, '')
       });
     }
@@ -29,14 +31,14 @@ describe('BroccoliTemplater', function() {
     });
 
     it('basic templating', function() {
-      var tree = template(__dirname + '/fixtures/one', __dirname + '/fixtures/templates/module-template.js.t', function(content, relativePath) {
+      let tree = template(__dirname + '/fixtures/one', __dirname + '/fixtures/templates/module-template.js.t', (content, relativePath) => {
         return {
           moduleBody: content
         };
       })
 
-      return tree.build().then(function() {
-        var path = tree.outputPath + '/foo.js';
+      return tree.build().then(() => {
+        let path = tree.outputPath + '/foo.js';
 
         expect(path).to.be.a.file;
         expect(path).to.have.content.that.match(/'fetch\/ajax'/);
