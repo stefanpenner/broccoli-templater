@@ -35,8 +35,8 @@ describe('BroccoliTemplater', function() {
         };
       })
 
-      return tree.build().then(function(result) {
-        var path = result.directory + '/foo.js';
+      return tree.build().then(function() {
+        var path = tree.outputPath + '/foo.js';
 
         expect(path).to.be.a.file;
         expect(path).to.have.content.that.match(/'fetch\/ajax'/);

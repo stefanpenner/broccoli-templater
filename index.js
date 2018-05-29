@@ -1,6 +1,5 @@
 /* jshint node: true */
 'use strict';
-var stew = require('broccoli-stew');
 var Filter = require('broccoli-filter');
 var TemplateFile = require('./template-file');
 var p = require('path');
