@@ -1,60 +1,62 @@
 /* jshint node: true */
 'use strict';
-var stew = require('broccoli-stew');
-var Filter = require('broccoli-filter');
-var TemplateFile = require('./template-file');
-var p = require('path');
-var fs = require('fs');
 
-module.exports = Template;
+const Filter = require('broccoli-filter');
+const TemplateFile = require('./template-file');
+const p = require('path');
+const fs = require('fs');
 
-function Template(inputTree, templatePath, variablesFn, options) {
-  Filter.call(this, inputTree, options);
+class Template extends Filter {
+  constructor(inputTree, templatePath, variablesFn, options) {
+    super(inputTree, options)
 
-  this.templatePath = templatePath;
-  this.variablesFn = variablesFn;
-  this._template = undefined;
-}
-
-Template.prototype = Object.create(Filter.prototype);
-Template.prototype.extensions = ['js'];
-Template.prototype.currentTemplateFile = function() {
-  var stats = fs.statSync(this.templatePath);
-
-  return new TemplateFile(this.templatePath, stats.isFile() ? 'file' : 'directory', stats);
-};
-
-Template.prototype.processString = function(file, relativePath) {
-  return this._template.template(this.variablesFn(file, relativePath));
-};
-
-Template.prototype.isTemplatePath = function(path) {
-  return this.templatePath === '/' + path;
-};
-
-Template.prototype.canProcessFile = function(relativePath) {
-  if (this.isTemplatePath(relativePath)) { return true; }
-
-  return Filter.prototype.canProcessFile.call(this, relativePath);
-};
-
-Template.prototype.processAndCacheFile = function(srcDir, destDir, relativePath) {
-  if (this.isTemplatePath(relativePath)) { return; }
-
-  if (this._template === undefined) {
-    this._template = this.currentTemplateFile();
-  } else {
-    var newTemplateFile = this.currentTemplateFile();
-
-    if (!newTemplateFile.equal(this._template)) {
-      this._template = newTemplateFile;
-      this.flushCache();
-    }
+    this.templatePath = templatePath;
+    this.variablesFn = variablesFn;
+    this._template = undefined;
   }
 
-  return Filter.prototype.processAndCacheFile.call(this, srcDir, destDir, relativePath);
-};
+  currentTemplateFile() {
+    let stats = fs.statSync(this.templatePath);
 
-Template.prototype.flushCache = function() {
-  delete this._cache;
-};
+    return new TemplateFile(this.templatePath, stats.isFile() ? 'file' : 'directory', stats);
+  }
+
+  processString(file, relativePath) {
+    return this._template.template(this.variablesFn(file, relativePath));
+  }
+
+  isTemplatePath(path) {
+    return this.templatePath === '/' + path;
+  }
+
+  canProcessFile(relativePath) {
+    if (this.isTemplatePath(relativePath)) { return true; }
+
+    return super.canProcessFile(relativePath);
+  }
+
+  processAndCacheFile(srcDir, destDir, relativePath) {
+    if (this.isTemplatePath(relativePath)) { return; }
+
+    if (this._template === undefined) {
+      this._template = this.currentTemplateFile();
+    } else {
+      let newTemplateFile = this.currentTemplateFile();
+
+      if (!newTemplateFile.equal(this._template)) {
+        this._template = newTemplateFile;
+        this.flushCache();
+      }
+    }
+
+    return super.processAndCacheFile(srcDir, destDir, relativePath);
+  }
+
+  flushCache() {
+    delete this._cache;
+  }
+}
+
+Template.prototype.extensions = ['js'];
+module.exports = Template;
+
