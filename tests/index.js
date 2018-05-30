@@ -53,6 +53,10 @@ describe('BroccoliTemplater', function() {
       input = yield createTempDir();
       template = yield createTempDir();
 
+      template.write({
+        'module-template.js.t': TEMPLATE
+      });
+
       let tree = new Template(input.path(), template.path() + '/module-template.js.t', (content, relativePath) => {
         return {
           moduleBody: content
@@ -60,10 +64,6 @@ describe('BroccoliTemplater', function() {
       });
 
       output = createBuilder(tree);
-
-      template.write({
-        'module-template.js.t': TEMPLATE
-      });
     }));
 
     after(co.wrap(function* () {
@@ -77,43 +77,98 @@ describe('BroccoliTemplater', function() {
         'foo.js': `
 function foo() {
 
-}
-        `
-      });
+}`});
 
       yield output.build();
 
       expect(output.read()['foo.js']).to.match(/'fetch\/ajax'/);
     }));
 
-    it('stability', co.wrap(function* () {
+    it('rebuilds correctly', co.wrap(function* () {
+
+      // write a new file
       input.write({
         'foo.js': `
 function foo() {
 
-}
-        `
-      });
+}`});
 
       yield output.build();
       expect(output.changes()).to.eql({ 'foo.js': 'create' });
 
+      // write a new file
 input.write({
-        'foo.js': `
+        'bar.js': `
 function bar() {
 
-}
-        `
+}`});
+
+      yield output.build();
+      expect(output.changes()).to.eql({ 'bar.js': 'create' });
+
+      // delete a file
+      input.write({
+        'foo.js': null
       });
 
       yield output.build();
-      expect(output.changes()).to.eql({ 'foo.js': 'change' });
+      expect(output.changes()).to.eql({ 'foo.js': 'unlink' });
 
+      // add a directory with a file
+      input.write({
+        'bar.js': 'new content',
+        'apple': {
+          'orange.js': 'foo'
+        }
+      });
 
       yield output.build();
 
-      // TODO: expect no changes, inputs haven't changed, so our output should also not.
-      // expect(output.changes()).to.eql({ });
+      expect(output.read()['bar.js']).to.contain(`define('fetch', `);
+      expect(output.read()['bar.js']).to.contain(`new content`);
+      expect(output.read().apple['orange.js']).to.contain(`define('fetch', `);
+      expect(output.read().apple['orange.js']).to.contain(`foo`);
+
+      expect(output.changes()).to.eql({
+        'bar.js': 'change',
+        'apple/': 'mkdir',
+        'apple/orange.js': 'create'
+      });
+
+      // make no changes
+      yield output.build();
+      expect(output.changes()).to.eql({ });
+
+      template.write({
+        'module-template.js.t': TEMPLATE + 'CHANGE'
+      });
+
+      // template changes
+      yield output.build();
+
+      expect(output.changes()).to.eql({
+        'bar.js': 'change',
+        'apple/orange.js': 'change'
+      });
+
+      // remove the directoy and file
+      input.write({
+        'apple': null
+      });
+
+      yield output.build();
+      expect(output.changes()).to.eql({
+        'apple/': 'rmdir',
+        'apple/orange.js': 'unlink'
+      });
+
+      expect(output.read()['bar.js']).to.contain(`define('fetch', `);
+      expect(output.read()['bar.js']).to.contain(`new content`);
+      expect(output.read()['bar.js']).to.contain(`CHANGE`);
+
+      // no changes
+      yield output.build();
+      expect(output.changes()).to.eql({});
     }));
   });
 });

@@ -3,26 +3,45 @@
 const fs = require('fs');
 
 module.exports = class TemplateFile {
-  constructor(path, type, stat) {
-    this.path = path;
-    this.type = type;
-    this.stat = stat;
+  static fromPath(path) {
+    return new this(path);
   }
 
-  equal(file) {
-    // key represents a file, diff the file
-    if (this.type       === file.type &&
-        this.path       === file.path &&
-        this.stat.mode  === file.stat.mode &&
-        this.stat.size  === file.stat.size &&
-        this.type === 'directory' ? true : this.stat.mtime.getTime() === file.stat.mtime.getTime()) {
+  constructor(path, _stat, _content) {
+    this.path = path;
+    this._stat = _stat;
+    this._content = _content;
+    this.__template = undefined;
+  }
+
+  get stat() {
+    if (this._stat !== undefined) {
+      return this._stat;
+    }
+
+    return (this._stat = fs.statSync(this.path))
+  }
+
+  equal(other) {
+    // key represents a other, diff the other
+    if (this.path     === other.path &&
+      this.stat.mode  === other.stat.mode &&
+      this.stat.size  === other.stat.size &&
+      this.type === 'directory' ? true : this.stat.mtime.getTime() === other.stat.mtime.getTime()) {
       return true;
     }
   }
 
-  template(variables) {
+  get _template() {
+    if (this.__template) {
+      return this.__template;
+    }
+
     const templater = require('lodash.template');
-    this.template = templater(fs.readFileSync(this.path));
-    return this.template(variables);
+    return (this.__template = templater(fs.readFileSync(this.path)));
+  }
+
+  template(variables) {
+    return this._template(variables);
   }
 }
