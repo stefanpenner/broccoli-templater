@@ -1,59 +1,78 @@
 /* jshint node: true */
 'use strict';
 
-const Filter = require('broccoli-filter');
+const FSTree = require('fs-tree-diff');
+const walkSync = require('walk-sync');
+const Plugin = require('broccoli-plugin');
 const TemplateFile = require('./template-file');
 const p = require('path');
 const fs = require('fs');
+const rimraf = require('rimraf');
 
-class Template extends Filter {
-  constructor(inputTree, templatePath, variablesFn, options) {
-    super(inputTree, options)
+class Template extends Plugin {
+  constructor(inputTree, templatePath, variablesFn) {
+    super([inputTree], {
+      persistentOutput: true
+    });
 
-    this.templatePath = templatePath;
     this.variablesFn = variablesFn;
-    this._template = undefined;
+    this._templatePath = templatePath;
+    this._currentTemplate = TemplateFile.fromPath(this._templatePath);
+    this._previousInput = FSTree.fromPaths([]);
   }
 
-  currentTemplateFile() {
-    let stats = fs.statSync(this.templatePath);
+  build() {
+    let inputPath = this.inputPaths[0];
+    let outputPath = this.outputPath;
+    let proposedTemplate = TemplateFile.fromPath(this._templatePath);
 
-    return new TemplateFile(this.templatePath, stats.isFile() ? 'file' : 'directory', stats);
-  }
-
-  processString(file, relativePath) {
-    return this._template.template(this.variablesFn(file, relativePath));
-  }
-
-  isTemplatePath(path) {
-    return this.templatePath === '/' + path;
-  }
-
-  canProcessFile(relativePath) {
-    if (this.isTemplatePath(relativePath)) { return true; }
-
-    return super.canProcessFile(relativePath);
-  }
-
-  processAndCacheFile(srcDir, destDir, relativePath) {
-    if (this.isTemplatePath(relativePath)) { return; }
-
-    if (this._template === undefined) {
-      this._template = this.currentTemplateFile();
-    } else {
-      let newTemplateFile = this.currentTemplateFile();
-
-      if (!newTemplateFile.equal(this._template)) {
-        this._template = newTemplateFile;
-        this.flushCache();
-      }
+    if (!proposedTemplate.equal(this._currentTemplate)) {
+      this._currentTemplate = proposedTemplate;
+      rimraf.sync(this.outputPath);
+      fs.mkdirSync(this.outputPath);
+      this._previousInput = FSTree.fromPaths([]);
     }
 
-    return super.processAndCacheFile(srcDir, destDir, relativePath);
+    let currentInput = FSTree.fromEntries(walkSync.entries(inputPath));
+
+    let changes = this._previousInput.calculatePatch(currentInput);
+    let hasChanges = changes.length > 0;
+
+    changes.forEach(change => {
+      let operation = change[0];
+      let file = change[1];
+      let entry = change[2];
+      let inputFilePath = `${inputPath}/${file}`;
+      let outputFilePath = `${outputPath}/${file}`;
+
+      switch (operation) {
+        case 'change':
+        case 'create':
+          fs.writeFileSync(outputFilePath, this._processString(fs.readFileSync(inputFilePath, 'UTF8'), file));
+          break;
+        case 'unlink': {
+          fs.unlinkSync(outputFilePath);
+          break;
+        }
+        case 'rmdir': {
+          fs.rmdirSync(outputFilePath);
+          break;
+        }
+        case 'mkdir': {
+          fs.mkdirSync(outputFilePath);
+          break;
+        }
+        default: {
+          throw new TypeError(`Unknown operation: ${operation} on ${file}`)
+        }
+      }
+    });
+
+    this._previousInput = currentInput;
   }
 
-  flushCache() {
-    delete this._cache;
+  _processString(file, relativePath) {
+    return this._currentTemplate.template(this.variablesFn(file, relativePath));
   }
 }
 
